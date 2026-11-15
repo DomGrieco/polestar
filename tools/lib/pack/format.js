@@ -19,6 +19,10 @@ const LEGS_FORMAT = 7;
 // Format 11: a goal's `either` (one of a set in its step). An older Polestar would wait for
 // every goal of the set, so a pack that uses it is written in a format of its own.
 const EITHER_FORMAT = 11;
+// Format 11: the `buff` goal, a `rep` goal's `points` and the `rep` and `buff` when predicates. An
+// older Polestar refuses the pack as too new instead of refusing each guide with "unknown verb"
+// or "bad when", or counting a `rep` goal done at the start of its standing.
+const BUFF_REP_FORMAT = 11;
 const NEEDS = { 1: '0.1.0', 2: '0.2.4', 3: '0.2.5', 4: '0.2.6', 5: '0.3.0', 6: '0.3.0', 7: '0.3.0', 11: '0.4.1' };
 
 // A step with `label` or `along` (an older Polestar would stop at an along step).
@@ -43,8 +47,18 @@ const usesMoneyTask = (g) => (g.steps || []).some((s) =>
 // A goal marked `either` needs format 11 (EITHER_FORMAT).
 const usesEither = (g) => (g.steps || []).some((s) => (s.goals || []).some((goal) => goal.either));
 
+// A `buff` goal, a `rep` goal with points, or a `rep` or `buff` predicate (on a step, a `skipto`
+// or a `next` option) needs format 11 (BUFF_REP_FORMAT).
+const FORMAT11_WHEN = new Set(['rep', 'buff']);
+const needs11 = (list) => (list || []).some((p) => FORMAT11_WHEN.has(p.k));
+const usesBuffRep = (g) => (g.steps || []).some((s) =>
+	(s.goals || []).some((goal) => goal.t === 'buff' || (goal.t === 'rep' && goal.points)) || needs11(s.when) ||
+	(Array.isArray(s.skipto) && s.skipto.some((k) => needs11([k.when])))) ||
+	Object.values(g.nextWhen || {}).some(needs11);
+
 // The format a pack's compiled guides need: EITHER_FORMAT when a goal is one of an
-// `either` set, MONEY_TASK_FORMAT when a guide
+// `either` set, BUFF_REP_FORMAT when a guide uses a `buff` goal,
+// a `rep` goal's points or a `rep` or `buff` predicate, MONEY_TASK_FORMAT when a guide
 // uses money/task/enter/cast/abandon/destroy/die goals, a money, dungeon, upgrade, done, skill, cooldown, group or knows when predicate or a
 // `skipto`, WHEN_FORMAT when a step
 // has `when`, `label` or `along`, a level goal has `frac`, or a `next`
@@ -52,6 +66,7 @@ const usesEither = (g) => (g.steps || []).some((s) => (s.goals || []).some((goal
 // LEGS_FORMAT (project.js buildPackFiles).
 function formatFor(guides) {
 	if ((guides || []).some(usesEither)) return EITHER_FORMAT;
+	if ((guides || []).some(usesBuffRep)) return BUFF_REP_FORMAT;
 	if ((guides || []).some(usesMoneyTask)) return MONEY_TASK_FORMAT;
 	const uses = (guides || []).some((g) => (g.steps || []).some((s) => (Array.isArray(s.when) && s.when.length) || usesAlong(s)));
 	if (uses || (guides || []).some(usesLevelFrac)) return WHEN_FORMAT;
@@ -108,4 +123,4 @@ function placeholderLicense(license) {
 	return `Licensed under ${license}: ${LICENSE_PLACEHOLDER}.\n`;
 }
 
-module.exports = { FORMAT, WHEN_FORMAT, MONEY_TASK_FORMAT, LEGS_FORMAT, EITHER_FORMAT, NEEDS, formatFor, PACK_ID_RE, FOLDER_RE, RESERVED_IDS, GENERATED_MARKER, LEGACY_GENERATED_MARKER, isGenerated, TOC_MARKER, TOC_TITLE_PREFIX, LEGACY_TOC_TITLE_PREFIX, LICENSE_PLACEHOLDER, ownsGuideId, defaultFolder, placeholderLicense };
+module.exports = { FORMAT, WHEN_FORMAT, MONEY_TASK_FORMAT, LEGS_FORMAT, EITHER_FORMAT, BUFF_REP_FORMAT, NEEDS, formatFor, PACK_ID_RE, FOLDER_RE, RESERVED_IDS, GENERATED_MARKER, LEGACY_GENERATED_MARKER, isGenerated, TOC_MARKER, TOC_TITLE_PREFIX, LEGACY_TOC_TITLE_PREFIX, LICENSE_PLACEHOLDER, ownsGuideId, defaultFolder, placeholderLicense };
