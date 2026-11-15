@@ -34,6 +34,9 @@ pub const BUFF_REP_FORMAT: u32 = 11;
 /// Format 11: the `deposit` and `equip` goals and the `equipped` and `indoors` when predicates. An older
 /// Polestar refuses the pack as too new instead of refusing each guide with "unknown verb" or "bad when".
 pub const DEPOSIT_EQUIP_FORMAT: u32 = 11;
+/// Format 11: an objective goal's `upto` (part of the objective's count). An older Polestar would hold the
+/// step until the whole objective is done.
+pub const UPTO_FORMAT: u32 = 11;
 
 /// NEEDS[format]: the first Polestar version that reads it (`undefined` -> None).
 pub fn needs(format: u32) -> Option<&'static str> {
@@ -126,6 +129,11 @@ fn uses_deposit_equip(g: &V) -> bool {
 	}) || g.get("nextWhen").values().iter().any(needs_worn)
 }
 
+/// A goal with `upto` needs format 11 (UPTO_FORMAT).
+fn uses_upto(g: &V) -> bool {
+	g.get("steps").items().iter().any(|s| s.get("goals").items().iter().any(|goal| !goal.get("upto").is_undef()))
+}
+
 fn has_keys(v: &V) -> bool {
 	v.truthy() && !v.keys().is_empty()
 }
@@ -133,7 +141,8 @@ fn has_keys(v: &V) -> bool {
 /// The format a pack's compiled guides need: EITHER_FORMAT when a goal is one of an `either` set,
 /// BUFF_REP_FORMAT when a guide uses a `buff` goal, a `rep` goal's
 /// points or a `rep` or `buff` predicate, DEPOSIT_EQUIP_FORMAT when a guide uses a `deposit` or `equip`
-/// goal or an `equipped` or `indoors` predicate, WAIT_FORMAT when a guide has a `wait` goal,
+/// goal or an `equipped` or `indoors` predicate, UPTO_FORMAT when a goal has `upto`,
+/// WAIT_FORMAT when a guide has a `wait` goal,
 /// MONEY_TASK_FORMAT when a guide
 /// uses money/task/enter/cast/abandon/destroy goals, a money, dungeon, upgrade, done, skill, cooldown, group or knows when predicate or a
 /// `skipto`, WHEN_FORMAT when a step
@@ -149,6 +158,9 @@ pub fn format_for(guides: &[V]) -> u32 {
 	}
 	if guides.iter().any(uses_deposit_equip) {
 		return DEPOSIT_EQUIP_FORMAT;
+	}
+	if guides.iter().any(uses_upto) {
+		return UPTO_FORMAT;
 	}
 	if guides.iter().any(uses_wait) {
 		return WAIT_FORMAT;
