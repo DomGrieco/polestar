@@ -58,6 +58,29 @@ fn either_goes_on_every_goal_that_can_hold_a_step_and_on_no_note_or_wait() {
 	}
 }
 
+#[test]
+fn either_goes_on_the_buff_deposit_and_equip_goals_beside_their_own_modifiers() {
+	let lines = ["buff 1126 \"Mark of the Wild\" either", "buff 15007 \"Resurrection Sickness\" off either", "deposit 750 x15 either", "equip 750 either", "equip 750 off either"];
+	let mut src = vec!["step One".to_string()];
+	src.extend(lines.iter().map(|l| format!("  {l}")));
+	let r = compile(&guide_text(&src.iter().map(String::as_str).collect::<Vec<_>>()));
+	assert!(r.errors.is_empty(), "{}", r.text);
+	let seen: Vec<Value> = goals(&r).iter().map(|g| json!([g["t"], g.get("off").cloned().unwrap_or(Value::Null), g["either"]])).collect();
+	assert_eq!(seen, [json!(["buff", null, true]), json!(["buff", true, true]), json!(["deposit", null, true]), json!(["equip", null, true]), json!(["equip", true, true])]);
+	let out = emit(&r.guides);
+	assert!(out.contains("{ t = \"buff\", spell = 1126, spellName = \"Mark of the Wild\", either = true },\n"), "{out}");
+	assert!(out.contains("{ t = \"buff\", spell = 15007, spellName = \"Resurrection Sickness\", off = true, either = true },\n"), "{out}");
+	assert!(out.contains("{ t = \"deposit\", item = 750, itemName = \"Tough Wolf Meat\", count = 15, either = true },\n"), "{out}");
+	assert!(out.contains("{ t = \"equip\", item = 750, itemName = \"Tough Wolf Meat\", either = true },\n"), "{out}");
+	assert!(out.contains("{ t = \"equip\", off = true, item = 750, itemName = \"Tough Wolf Meat\", either = true },\n"), "{out}");
+	assert_eq!(format_for(&r.guides), EITHER_FORMAT);
+	// One of them alone is no set, as with any other goal.
+	for line in ["buff 1126 \"Mark of the Wild\" either", "deposit 750 either", "equip 750 off either"] {
+		let alone = guide_text(&["step One", &format!("  {line}"), "  accept 7"]);
+		assert_eq!(compile(&alone).errors, [format!("test.guide:{}: `either` needs a second `either` goal in its step: the step is done when any one of them is", line_of(&alone, line))]);
+	}
+}
+
 /// The fixture data plus two quests of Marshal McBride's of which a character takes one: 9720 By the Road and
 /// 9721 By the River close each other (`excl`).
 fn fork_data() -> Data {

@@ -44,6 +44,25 @@ test('`either` goes on every goal that can hold a step, and on no `note` or `wai
 	}
 });
 
+test('`either` goes on the `buff`, `deposit` and `equip` goals, beside their own modifiers', () => {
+	const lines = ['buff 1126 "Mark of the Wild" either', 'buff 15007 "Resurrection Sickness" off either', 'deposit 750 x15 either', 'equip 750 either', 'equip 750 off either'];
+	const r = compile(guideText(['step One', ...lines.map((l) => `  ${l}`)]));
+	assert.deepEqual(r.errors, [], r.text);
+	assert.deepEqual(goalsOf(r).map((g) => [g.t, g.off, g.either]), [['buff', undefined, true], ['buff', true, true], ['deposit', undefined, true], ['equip', undefined, true], ['equip', true, true]]);
+	const out = emit(r);
+	assert.ok(out.includes('{ t = "buff", spell = 1126, spellName = "Mark of the Wild", either = true },\n'), out);
+	assert.ok(out.includes('{ t = "buff", spell = 15007, spellName = "Resurrection Sickness", off = true, either = true },\n'), out);
+	assert.ok(out.includes('{ t = "deposit", item = 750, itemName = "Tough Wolf Meat", count = 15, either = true },\n'), out);
+	assert.ok(out.includes('{ t = "equip", item = 750, itemName = "Tough Wolf Meat", either = true },\n'), out);
+	assert.ok(out.includes('{ t = "equip", off = true, item = 750, itemName = "Tough Wolf Meat", either = true },\n'), out);
+	assert.equal(formatFor(r.guides), EITHER_FORMAT);
+	// One of them alone is no set, as with any other goal.
+	for (const line of ['buff 1126 "Mark of the Wild" either', 'deposit 750 either', 'equip 750 off either']) {
+		const alone = guideText(['step One', `  ${line}`, '  accept 7']);
+		assert.deepEqual(compile(alone).errors, [`test.guide:${lineOf(alone, line)}: \`either\` needs a second \`either\` goal in its step: the step is done when any one of them is`]);
+	}
+});
+
 // The fixture data plus two quests of Marshal McBride's of which a character takes one: 9720
 // By the Road and 9721 By the River close each other (`excl`).
 function forkData() {

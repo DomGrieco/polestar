@@ -90,3 +90,28 @@ test('Guides.Validate refuses an `either` that is not true', () => {
 	assert.equal(out.ok, true);
 	assert.match(out.bad, /bad either/);
 });
+
+test('`either` with the `buff`, `equip` and `deposit` goals: any one of them finishes the set, and is kept as its own goal is', () => {
+	const [open, worn, bare, taken] = playGuide(
+		['step Ready', '  buff 1126 "Mark of the Wild" either', '  equip 750 either', '  accept 783', 'step Then', '  task "Go on"'],
+		`snap()
+		w.equip(750, true)
+		snap()
+		w.equip(750, false)
+		snap()
+		w.accept(783, {})
+		snap()`,
+	);
+	assert.equal(statuses(open, 1).includes('done'), false);
+	assert.deepEqual(statuses(worn, 1).slice(0, 2), ['done', 'done'], 'the item is worn: the aura is no longer asked for');
+	assert.equal(worn.live, 1, 'the accept is not of the set and still holds the step');
+	assert.deepEqual(statuses(bare, 1).slice(0, 2), ['done', 'done'], 'the `equip` goal is kept once its step had it, and the set with it');
+	assert.equal(taken.live, 2);
+	// The aura instead, and a `deposit` beside a task.
+	const [blessed] = playGuide(['step Ready', '  buff 1126 "Mark of the Wild" either', '  equip 750 either', 'step Then', '  task "Go on"'], 'w.setAura(1126, true)\nsnap()');
+	assert.equal(blessed.live, 2);
+	const [held, banked] = playGuide(['step Bank', '  deposit 750 either', '  task "Keep it" either', 'step Then', '  task "Go on"'], 'snap()\nw.deposit(750)\nsnap()', 'w.items[750] = 4');
+	assert.equal(held.live, 1);
+	assert.equal(statuses(held, 1).includes('done'), false);
+	assert.equal(banked.live, 2);
+});
