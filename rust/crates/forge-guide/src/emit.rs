@@ -88,7 +88,7 @@ pub const GOAL_KEYS: [&str; 84] = [
 	"zone",
 	"spell",
 	"spellName",
-	// A `buff` goal the other way round: done while the aura is gone (format 11).
+	// A `buff` or `equip` goal the other way round: done while the aura is gone, or the item is not worn (format 11).
 	"off",
 	"faction",
 	"factionName",

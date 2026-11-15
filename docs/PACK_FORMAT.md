@@ -324,6 +324,8 @@ hold:
 | `"knows"` | `spell` (format 5) | the character knows the spell (`Compat.IsSpellKnown`, else `Compat.IsPlayerSpell`) |
 | `"rep"` | `faction` (the faction's id), `standing` (1 Hated .. 8 Exalted); optional `name`, `points` (format 11) | the standing with the faction is `standing` or higher (`Compat.GetFactionStanding`); with `points`, that many points into `standing`, or any higher standing. A faction the character has not met is below every standing |
 | `"buff"` | `spell` (format 11) | the player has the aura of that spell id, a buff or a debuff (`Compat.PlayerHasAura`); while the client refuses to say, neither `buff` nor `!buff` holds |
+| `"equipped"` | `item` (format 11) | the player wears the item (`Compat.IsItemEquipped`); while the client cannot say, neither `equipped` nor `!equipped` holds |
+| `"indoors"` | nothing more (format 11) | the player is indoors (`Compat.IsIndoors`); while the client cannot say, neither holds |
 | `"group"` | `q` (format 5) | the player answered "do it" for that group quest (`CharState().groupQuests[q] == "do"`); unanswered, the step applies and is not done, so the route waits there; refused in `nextWhen` and `skipto` |
 
 ```lua
@@ -744,14 +746,15 @@ changes, read by Polestar 0.3.0 and later:
 
 ## Format 11
 
-Format 5 with a goal's **`either`**, the **`buff`** goal, a `rep` goal's
-**`points`** and the **`rep`** and **`buff`** `when` predicates (on a step,
+Format 5 with a goal's **`either`**, the **`buff`**, **`deposit`** and
+**`equip`** goals, a `rep` goal's **`points`** and the **`rep`**,
+**`buff`**, **`equipped`** and **`indoors`** `when` predicates (on a step,
 a `skipto` or a `next` option). Polestar 0.4.1 and later read it. The
 compiler writes a pack in format 11 only when its guides use one of them. An
-older Polestar would refuse a guide with a `buff` goal or one of the
-predicates ("unknown verb", "bad when"), and would read the others wrongly:
-wait for every goal of an `either` set, or count a `rep` goal done at the
-start of its standing. So these need their own format.
+older Polestar would refuse a guide with one of the new goals or predicates
+("unknown verb", "bad when"), and would read the others wrongly: wait for
+every goal of an `either` set, or count a `rep` goal done at the start of
+its standing. So these need their own format.
 
 `either = true` on a goal: the goal is one of its step's set. Once any goal
 of the set that applies to the character is done, the others count as done.
@@ -781,6 +784,24 @@ of 1 or more, or on another verb, refuses the guide.
 { when = { { k = "rep", name = "Argent Dawn", faction = 529, standing = 6 }, { k = "buff", neg = true, spell = 1126 } }, goals = { ... } }
 ```
 
+`deposit` goal: `{ t = "deposit", item = <itemId>, itemName = "<Name>" }`.
+Done once the bags hold none of the item, latched within its live step as a
+`destroy` is (not on a step ahead: an item not in the bags yet is not an
+item put in the bank). With `count = N` it is done once the bank holds N of
+the item (the count with the bank less the bags'), and its progress counts
+them. Polestar reads the counts and moves nothing.
+
+`equip` goal: `{ t = "equip", item = <itemId>, itemName = "<Name>" }`. Done
+while the player wears the item (`Compat.IsItemEquipped`), and latched once
+its live step had it or the route has moved past it. With `off = true` it is
+done while the item is not worn. A client that cannot say makes it the
+player's to tick. An `off` that is not `true`, or on a verb other than
+`buff` and `equip`, refuses the guide. Polestar equips nothing.
+
+```lua
+{ when = { { k = "equipped", neg = true, item = 6256 }, { k = "indoors", neg = true } }, goals = { { t = "equip", item = 6256, itemName = "Fishing Pole" } } }
+```
+
 ## Import strings
 
 One compiled guide as one line of text, for a player to paste on Polestar's
@@ -808,7 +829,7 @@ wrap it). The payload is JSON:
 
 | Key | Required | Value |
 |---|---|---|
-| `format` | yes | the guide data's format (above): 11 when the guide uses a format 11 feature (`either`, a `buff` goal, points on a `rep` goal, or a `rep` or `buff` predicate), 5 when the guide uses `money`/`task`/`enter`/`cast`/`abandon`/`destroy` goals or a `money` when predicate, 4 when a step has `when`, `along` or `label` or a `level` goal has `frac`, else 3; Polestar refuses a format it does not read |
+| `format` | yes | the guide data's format (above): 11 when the guide uses a format 11 feature (`either`, a `buff`, `deposit` or `equip` goal, points on a `rep` goal, or a `rep`, `buff`, `equipped` or `indoors` predicate), 5 when the guide uses `money`/`task`/`enter`/`cast`/`abandon`/`destroy` goals or a `money` when predicate, 4 when a step has `when`, `along` or `label` or a `level` goal has `frac`, else 3; Polestar refuses a format it does not read |
 | `license` | yes | the licence of the guide, from the pack's `pack.json` |
 | `guide` | yes | one guide exactly as `RegisterGuide(def)` takes it, without `pack`: the keys above, numbers rounded as `Guides.lua` writes them, `preTitles` with the quest ids as the object's keys |
 | `frames` | no | `RegisterMapFrames`'s `era` table for the maps its goals use, by uiMapID. Polestar takes a frame only for a map the guide's goals or their smart targets stand on, and only where no one (Polestar, a community addon, an earlier import) has registered one |
@@ -861,8 +882,9 @@ or nothing (equal or lower). Imported guides are listed in the guide menu as
   (baked legs in the race parts) and format 8 (packed spawn spots and
   faction parts, Polestar's own pack only) by 0.3.0 and later, format 9
   (the `wait` goal) by 0.3.0 and later, and format 11 (a goal's `either`,
-  the `buff` goal, a `rep` goal's `points`, the `rep` and `buff` when
-  predicates) by 0.4.1 and later.
+  the `buff`, `deposit` and `equip` goals, a `rep` goal's `points`, the
+  `rep`, `buff`, `equipped` and `indoors` when predicates) by 0.4.1 and
+  later.
 - A pack in a format this Polestar does not read registers nothing; the
   Community guides page shows it as `too-new` with "Needs Polestar <version> or
   newer." (rule 5).

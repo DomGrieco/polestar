@@ -60,6 +60,10 @@ const MODS = {
 	complete: [...COMMON, ...COORDS],
 	abandon: ['text', 'optional', 'only', 'either'],
 	destroy: ['text', 'optional', 'only', 'either'],
+	// `deposit <item> [xN]`: put the item in the bank (until the bags hold none, or the bank holds N).
+	deposit: ['text', 'optional', 'only', 'either', ...COORDS, 'count'],
+	// `equip <item>`: wear the item; with `off`, take it off.
+	equip: ['text', 'optional', 'only', 'either', ...COORDS, 'off'],
 	kill: [...COMMON, ...COORDS, 'npc', 'quest', 'count'],
 	collect: [...COMMON, ...COORDS, 'npc', 'quest', 'count', 'nearest', 'anywhere'],
 	goto: [...COMMON, 'map', 'r', 'frame'],
@@ -675,6 +679,8 @@ function parsePositional(verb, goal, toks, line, lex, ln, err, spans) {
 		case 'collect':
 		case 'use':
 		case 'destroy':
+		case 'deposit':
+		case 'equip':
 		case 'buy': {
 			if (!t) return err(ln, `\`${verb}\` needs an item id`), -1;
 			goal.item = parseId(t, 'item', ln, err);

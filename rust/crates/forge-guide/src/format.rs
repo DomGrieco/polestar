@@ -31,6 +31,9 @@ pub const EITHER_FORMAT: u32 = 11;
 /// Polestar refuses the pack as too new instead of refusing each guide with "unknown verb" or "bad when", or
 /// counting a `rep` goal done at the start of its standing.
 pub const BUFF_REP_FORMAT: u32 = 11;
+/// Format 11: the `deposit` and `equip` goals and the `equipped` and `indoors` when predicates. An older
+/// Polestar refuses the pack as too new instead of refusing each guide with "unknown verb" or "bad when".
+pub const DEPOSIT_EQUIP_FORMAT: u32 = 11;
 
 /// NEEDS[format]: the first Polestar version that reads it (`undefined` -> None).
 pub fn needs(format: u32) -> Option<&'static str> {
@@ -106,13 +109,31 @@ fn uses_buff_rep(g: &V) -> bool {
 	}) || g.get("nextWhen").values().iter().any(needs11)
 }
 
+// A `deposit` or `equip` goal, or an `equipped` or `indoors` predicate (on a step, a `skipto` or a `next`
+// option) needs format 11 (DEPOSIT_EQUIP_FORMAT).
+const DEPOSIT_EQUIP_VERBS: [&str; 2] = ["deposit", "equip"];
+const DEPOSIT_EQUIP_WHEN: [&str; 2] = ["equipped", "indoors"];
+
+fn needs_worn(list: &V) -> bool {
+	list.items().iter().any(|p| in_set(&DEPOSIT_EQUIP_WHEN, &p.get("k")))
+}
+
+fn uses_deposit_equip(g: &V) -> bool {
+	g.get("steps").items().iter().any(|s| {
+		s.get("goals").items().iter().any(|goal| in_set(&DEPOSIT_EQUIP_VERBS, &goal.get("t")))
+			|| needs_worn(&s.get("when"))
+			|| s.get("skipto").items().iter().any(|k| in_set(&DEPOSIT_EQUIP_WHEN, &k.get("when").get("k")))
+	}) || g.get("nextWhen").values().iter().any(needs_worn)
+}
+
 fn has_keys(v: &V) -> bool {
 	v.truthy() && !v.keys().is_empty()
 }
 
 /// The format a pack's compiled guides need: EITHER_FORMAT when a goal is one of an `either` set,
 /// BUFF_REP_FORMAT when a guide uses a `buff` goal, a `rep` goal's
-/// points or a `rep` or `buff` predicate, WAIT_FORMAT when a guide has a `wait` goal,
+/// points or a `rep` or `buff` predicate, DEPOSIT_EQUIP_FORMAT when a guide uses a `deposit` or `equip`
+/// goal or an `equipped` or `indoors` predicate, WAIT_FORMAT when a guide has a `wait` goal,
 /// MONEY_TASK_FORMAT when a guide
 /// uses money/task/enter/cast/abandon/destroy goals, a money, dungeon, upgrade, done, skill, cooldown, group or knows when predicate or a
 /// `skipto`, WHEN_FORMAT when a step
@@ -125,6 +146,9 @@ pub fn format_for(guides: &[V]) -> u32 {
 	}
 	if guides.iter().any(uses_buff_rep) {
 		return BUFF_REP_FORMAT;
+	}
+	if guides.iter().any(uses_deposit_equip) {
+		return DEPOSIT_EQUIP_FORMAT;
 	}
 	if guides.iter().any(uses_wait) {
 		return WAIT_FORMAT;

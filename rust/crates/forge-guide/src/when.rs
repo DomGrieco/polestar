@@ -16,8 +16,29 @@ use crate::obj;
 use crate::re;
 use crate::xp::level_point;
 
-pub const KINDS: [&str; 19] =
-	["level", "money", "onquest", "complete", "turnedin", "available", "has", "upgrade", "zone", "subzone", "bound", "dungeon", "done", "skill", "cooldown", "group", "knows", "rep", "buff"];
+pub const KINDS: [&str; 21] = [
+	"level",
+	"money",
+	"onquest",
+	"complete",
+	"turnedin",
+	"available",
+	"has",
+	"upgrade",
+	"zone",
+	"subzone",
+	"bound",
+	"dungeon",
+	"done",
+	"skill",
+	"cooldown",
+	"group",
+	"knows",
+	"rep",
+	"buff",
+	"equipped",
+	"indoors",
+];
 /// The standings, as the `rep` goal and predicate name them (1 Hated .. 8 Exalted).
 pub const STANDINGS: [(&str, f64); 8] = [("hated", 1.0), ("hostile", 2.0), ("unfriendly", 3.0), ("neutral", 4.0), ("friendly", 5.0), ("honored", 6.0), ("revered", 7.0), ("exalted", 8.0)];
 
@@ -59,7 +80,7 @@ pub fn read_standing_text(text: &str) -> Option<Result<Standing, String>> {
 const QUEST_ONE: [&str; 4] = ["complete", "turnedin", "available", "group"];
 /// The predicates that name a place.
 pub const PLACE: [&str; 3] = ["zone", "subzone", "bound"];
-const USAGE: &str = "predicates: level<N, level>=N, money>=1s, [!]onquest <quest>, [!]complete <quest>, [!]turnedin <quest>, [!]available <quest>, [!]has <item> [xN], [!]upgrade <item>, [!]zone \"<Name>\", [!]subzone \"<Name>\", [!]bound \"<Location>\", [!]dungeon \"<Name>\", [!]done <label>, [!]skill <Profession> <N>, [!]cooldown item <item>, [!]cooldown spell <spell>, [!]group <quest>, [!]knows <spell>, [!]rep <Faction> <Standing>[+<points>], [!]buff <spell>";
+const USAGE: &str = "predicates: level<N, level>=N, money>=1s, [!]onquest <quest>, [!]complete <quest>, [!]turnedin <quest>, [!]available <quest>, [!]has <item> [xN], [!]upgrade <item>, [!]zone \"<Name>\", [!]subzone \"<Name>\", [!]bound \"<Location>\", [!]dungeon \"<Name>\", [!]done <label>, [!]skill <Profession> <N>, [!]cooldown item <item>, [!]cooldown spell <spell>, [!]group <quest>, [!]knows <spell>, [!]rep <Faction> <Standing>[+<points>], [!]buff <spell>, [!]equipped <item>, [!]indoors";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WhenError {
@@ -286,6 +307,19 @@ pub fn parse_when(rest: &str) -> Result<V, WhenError> {
 		if s.points > 0.0 {
 			value.set("points", s.points);
 		}
+		return Ok(V::Obj(value));
+	}
+	if kind == "indoors" {
+		if !args.is_empty() {
+			return fail("`indoors` takes nothing after it");
+		}
+		return Ok(V::Obj(value));
+	}
+	if kind == "equipped" {
+		if !is_int(args) || str_to_num(args) <= 0.0 {
+			return fail("`equipped` needs one item id: equipped <item>");
+		}
+		value.set("item", str_to_num(args));
 		return Ok(V::Obj(value));
 	}
 	// zone, subzone, bound, dungeon
