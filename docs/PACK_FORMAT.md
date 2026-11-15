@@ -748,14 +748,15 @@ changes, read by Polestar 0.3.0 and later:
 
 Format 5 with a goal's **`either`**, the **`buff`**, **`deposit`** and
 **`equip`** goals, a `rep` goal's **`points`**, an objective goal's
-**`upto`** and the **`rep`**, **`buff`**, **`equipped`** and **`indoors`**
-`when` predicates (on a step, a `skipto` or a `next` option). Polestar 0.4.1
-and later read it. The compiler writes a pack in format 11 only when its
-guides use one of them. An older Polestar would refuse a guide with one of
-the new goals or predicates ("unknown verb", "bad when"), and would read
-the others wrongly: wait for every goal of an `either` set, count a `rep`
-goal done at the start of its standing, or hold a step until the whole
-objective is done. So these need their own format.
+**`upto`**, a step's **`backto`** and the **`rep`**, **`buff`**,
+**`equipped`** and **`indoors`** `when` predicates (on a step, a `skipto`,
+a `backto` or a `next` option). Polestar 0.4.1 and later read it. The
+compiler writes a pack in format 11 only when its guides use one of them. An
+older Polestar would refuse a guide with one of the new goals or predicates
+("unknown verb", "bad when"), and would read the others wrongly: wait for
+every goal of an `either` set, count a `rep` goal done at the start of its
+standing, hold a step until the whole objective is done, or play a `backto`
+round once and go on. So these need their own format.
 
 `either = true` on a goal: the goal is one of its step's set. Once any goal
 of the set that applies to the character is done, the others count as done.
@@ -812,6 +813,21 @@ is refused.
 { t = "kill", quest = 7, title = "Kobold Camp Cleanup", target = "Kobold Vermin", npc = 6, count = 10, oi = 1, upto = 4 }
 ```
 
+`backto` on a step: `{ to = "<label>", when = <predicate> }`, `when`
+optional (any predicate of a `skipto`). `to` names the step itself or an
+earlier step of the guide. When the step is done and `when` holds (or there
+is none), Polestar forgets, for every step from the labelled one through
+this one, the stored check-offs, skips, `when` outcomes and arrivals, and
+what it remembers of their quests the client does not flag as completed,
+then goes back to the labelled step. When `when` does not hold the route
+goes on, and the step sends it back no more until it has been open again.
+A `backto` that is no table, names no such label, sits on an `along` step or
+has a `group` predicate refuses the guide.
+
+```lua
+{ title = "Five at a time", backto = { to = "feathers", when = { k = "has", item = 21377, n = 5 } }, goals = { ... } }
+```
+
 ## Import strings
 
 One compiled guide as one line of text, for a player to paste on Polestar's
@@ -839,7 +855,7 @@ wrap it). The payload is JSON:
 
 | Key | Required | Value |
 |---|---|---|
-| `format` | yes | the guide data's format (above): 11 when the guide uses a format 11 feature (`either`, `upto`, a `buff`, `deposit` or `equip` goal, points on a `rep` goal, or a `rep`, `buff`, `equipped` or `indoors` predicate), 5 when the guide uses `money`/`task`/`enter`/`cast`/`abandon`/`destroy` goals or a `money` when predicate, 4 when a step has `when`, `along` or `label` or a `level` goal has `frac`, else 3; Polestar refuses a format it does not read |
+| `format` | yes | the guide data's format (above): 11 when the guide uses a format 11 feature (`either`, `upto`, `backto`, a `buff`, `deposit` or `equip` goal, points on a `rep` goal, or a `rep`, `buff`, `equipped` or `indoors` predicate), 5 when the guide uses `money`/`task`/`enter`/`cast`/`abandon`/`destroy` goals or a `money` when predicate, 4 when a step has `when`, `along` or `label` or a `level` goal has `frac`, else 3; Polestar refuses a format it does not read |
 | `license` | yes | the licence of the guide, from the pack's `pack.json` |
 | `guide` | yes | one guide exactly as `RegisterGuide(def)` takes it, without `pack`: the keys above, numbers rounded as `Guides.lua` writes them, `preTitles` with the quest ids as the object's keys |
 | `frames` | no | `RegisterMapFrames`'s `era` table for the maps its goals use, by uiMapID. Polestar takes a frame only for a map the guide's goals or their smart targets stand on, and only where no one (Polestar, a community addon, an earlier import) has registered one |
@@ -893,8 +909,8 @@ or nothing (equal or lower). Imported guides are listed in the guide menu as
   faction parts, Polestar's own pack only) by 0.3.0 and later, format 9
   (the `wait` goal) by 0.3.0 and later, and format 11 (a goal's `either`,
   the `buff`, `deposit` and `equip` goals, a `rep` goal's `points`, an
-  objective goal's `upto`, the `rep`, `buff`, `equipped` and `indoors` when
-  predicates) by 0.4.1 and later.
+  objective goal's `upto`, a step's `backto`, the `rep`, `buff`, `equipped`
+  and `indoors` when predicates) by 0.4.1 and later.
 - A pack in a format this Polestar does not read registers nothing; the
   Community guides page shows it as `too-new` with "Needs Polestar <version> or
   newer." (rule 5).

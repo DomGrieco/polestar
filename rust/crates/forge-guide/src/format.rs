@@ -37,6 +37,9 @@ pub const DEPOSIT_EQUIP_FORMAT: u32 = 11;
 /// Format 11: an objective goal's `upto` (part of the objective's count). An older Polestar would hold the
 /// step until the whole objective is done.
 pub const UPTO_FORMAT: u32 = 11;
+/// Format 11: a step's `backto` (a round of steps played again). An older Polestar would play the round once
+/// and go on.
+pub const BACKTO_FORMAT: u32 = 11;
 
 /// NEEDS[format]: the first Polestar version that reads it (`undefined` -> None).
 pub fn needs(format: u32) -> Option<&'static str> {
@@ -134,6 +137,11 @@ fn uses_upto(g: &V) -> bool {
 	g.get("steps").items().iter().any(|s| s.get("goals").items().iter().any(|goal| !goal.get("upto").is_undef()))
 }
 
+/// A step with `backto` needs format 11 (BACKTO_FORMAT).
+fn uses_backto(g: &V) -> bool {
+	g.get("steps").items().iter().any(|s| !s.get("backto").is_undef())
+}
+
 fn has_keys(v: &V) -> bool {
 	v.truthy() && !v.keys().is_empty()
 }
@@ -142,6 +150,7 @@ fn has_keys(v: &V) -> bool {
 /// BUFF_REP_FORMAT when a guide uses a `buff` goal, a `rep` goal's
 /// points or a `rep` or `buff` predicate, DEPOSIT_EQUIP_FORMAT when a guide uses a `deposit` or `equip`
 /// goal or an `equipped` or `indoors` predicate, UPTO_FORMAT when a goal has `upto`,
+/// BACKTO_FORMAT when a step has `backto`,
 /// WAIT_FORMAT when a guide has a `wait` goal,
 /// MONEY_TASK_FORMAT when a guide
 /// uses money/task/enter/cast/abandon/destroy goals, a money, dungeon, upgrade, done, skill, cooldown, group or knows when predicate or a
@@ -161,6 +170,9 @@ pub fn format_for(guides: &[V]) -> u32 {
 	}
 	if guides.iter().any(uses_upto) {
 		return UPTO_FORMAT;
+	}
+	if guides.iter().any(uses_backto) {
+		return BACKTO_FORMAT;
 	}
 	if guides.iter().any(uses_wait) {
 		return WAIT_FORMAT;

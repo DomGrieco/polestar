@@ -229,6 +229,13 @@ test('a `deposit` goal, with and without a count, and an `equip` goal on and off
 	for (const r of results) assert.equal(r.ok, true, JSON.stringify(r));
 });
 
+test('a guide with `backto` rounds plays to its end: each round is played once, then the step that goes back is skipped', { skip }, async () => {
+	const pack = commandPack({ pack: path.join(PACKS, 'rounds') });
+	const { results } = await playtest({ dir: pack.dir, manifest: pack.manifest, classes: ['WARRIOR'], contextDir: pack.contextDir, contextDataDir: pack.contextDataDir });
+	assert.ok(results.length > 0);
+	for (const r of results) assert.equal(r.ok, true, JSON.stringify(r));
+});
+
 test('level goals inside a level play through: the player gets that share of the level\'s XP', { skip }, async () => {
 	const pack = commandPack({ pack: path.join(PACKS, 'halflevel') });
 	const { results } = await playtest({ dir: pack.dir, manifest: pack.manifest, classes: ['WARRIOR'], contextDir: pack.contextDir, contextDataDir: pack.contextDataDir });
