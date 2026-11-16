@@ -118,8 +118,8 @@ pub const MODS: [(&str, &[&str]); 35] = [
 ];
 /// Object.keys(MODS).
 pub const VERBS: [&str; 35] = [
-	"accept", "turnin", "complete", "abandon", "destroy", "deposit", "equip", "kill", "collect", "goto", "talk", "interact", "use", "sethome", "hearth", "die", "getfp", "fly", "enter", "train", "buy",
-	"vendor", "level", "money", "task", "note", "skill", "learn", "cast", "craft", "buff", "rep", "explore", "achieve", "wait",
+	"accept", "turnin", "complete", "abandon", "destroy", "deposit", "equip", "kill", "collect", "goto", "talk", "interact", "use", "sethome", "hearth", "die", "getfp", "fly", "enter", "train",
+	"buy", "vendor", "level", "money", "task", "note", "skill", "learn", "cast", "craft", "buff", "rep", "explore", "achieve", "wait",
 ];
 
 /// `MODS[verb]` (own properties only).
